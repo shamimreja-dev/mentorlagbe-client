@@ -1,97 +1,209 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
+import {
+  BookOpen,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  UserCog,
+  X,
+} from "lucide-react";
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  // টেম্পোরারি ইউজার স্টেট (পরে BetterAuth সেশন দিয়ে রিপ্লেস করবেন)
-  const [user, setUser] = useState<{ name: string; role: 'student' | 'tutor' | 'admin'; image: string } | null>({
-    name: "John Doe",
+  const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // আপাতত ডেমো ইউজার রাখা হয়েছে UI দেখার জন্য। Auth যুক্ত করলে এটি ডাইনামিক হবে।
+  // টেস্ট করার জন্য এটাকে null করে দেখতে পারো Unauthenticated অবস্থা কেমন দেখায়।
+  const user: {
+    name: string;
+    role: "student" | "tutor" | "admin";
+    image?: string;
+  } | null = {
+    name: "Ariful Islam",
     role: "student",
-    image: "https://i.ibb.co.com/7X7d7X7/placeholder.png"
-  });
+    image: "https://i.ibb.co.com/5GzXkwq/user.png",
+  };
+
+  const navLinks = [
+    { name: "Home", href: "/" },
+    { name: "Browse Tuitions", href: "/tuitions" },
+    { name: "Pricing", href: "/pricing" },
+    { name: "How It Works", href: "/#how-it-works" },
+  ];
+
+  const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          
-          {/* Logo & Brand Name */}
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">
-              MentorLagbe
-            </span>
-          </Link>
-
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-8 font-medium text-slate-600">
-            <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
-            <Link href="/tuitions" className="hover:text-blue-600 transition-colors">Browse Tuitions</Link>
-            <Link href="/pricing" className="hover:text-blue-600 transition-colors">Pricing</Link>
-            <Link href="/about" className="hover:text-blue-600 transition-colors">How It Works</Link>
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        {/* Brand Logo (সব পেজে একই সাইজ ও স্টাইল থাকবে) */}
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="bg-indigo-600 p-2 rounded-xl text-white group-hover:bg-indigo-700 transition">
+            <BookOpen className="w-6 h-6" />
           </div>
+          <span className="text-2xl font-extrabold tracking-tight text-slate-900">
+            Mentor<span className="text-indigo-600">Lagbe</span>
+          </span>
+        </Link>
 
-          {/* Right Side: Auth / User Profile */}
-          <div className="hidden md:flex items-center gap-4">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <span className="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider bg-blue-50 text-blue-600 rounded-full border border-blue-200">
-                  {user.role}
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-8">
+          {navLinks.map((link) => (
+            <Link
+              key={link.name}
+              href={link.href}
+              className={`text-sm font-semibold transition ${
+                isActive(link.href)
+                  ? "text-indigo-600"
+                  : "text-slate-600 hover:text-indigo-600"
+              }`}
+            >
+              {link.name}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Desktop Auth / User Profile State */}
+        <div className="hidden md:flex items-center gap-3">
+          {user ? (
+            <div className="flex items-center gap-3">
+              {/* Role Badge */}
+              <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
+                {user.role}
+              </span>
+
+              {/* Dashboard Link */}
+              <Link
+                href={`/dashboard/${user.role}`}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+              >
+                <LayoutDashboard className="w-4 h-4 text-indigo-600" />
+                Dashboard
+              </Link>
+
+              {/* Update Profile Link */}
+              <Link
+                href="/dashboard/profile"
+                title="Update Profile"
+                className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
+              >
+                <UserCog className="w-5 h-5" />
+              </Link>
+
+              {/* Avatar & Name */}
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+                <img
+                  src={user.image || "https://i.ibb.co.com/5GzXkwq/user.png"}
+                  alt={user.name}
+                  className="w-9 h-9 rounded-full object-cover border border-indigo-200"
+                />
+                <span className="text-sm font-semibold text-slate-800 max-w-[110px] truncate">
+                  {user.name}
                 </span>
-                <div className="relative group">
-                  <div className="flex items-center gap-2 cursor-pointer p-1 rounded-full hover:bg-slate-100 transition">
-                    <img src={user.image} alt={user.name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
-                  </div>
-                  {/* Dropdown Menu */}
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-100 shadow-lg rounded-xl py-2 hidden group-hover:block">
-                    <Link href={`/dashboard/${user.role}`} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                      <LayoutDashboard className="w-4 h-4" /> Dashboard
-                    </Link>
-                    <Link href="/dashboard/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                      <User className="w-4 h-4" /> Update Profile
-                    </Link>
-                    <button onClick={() => setUser(null)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left">
-                      <LogOut className="w-4 h-4" /> Sign Out
-                    </button>
-                  </div>
-                </div>
               </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <Link href="/sign-in" className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-blue-600 transition">
-                  Sign In
-                </Link>
-                <Link href="/sign-up" className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-600/20 transition">
-                  Sign Up
-                </Link>
-              </div>
-            )}
-          </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
-            <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-slate-600 hover:text-slate-900">
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
+              {/* Sign Out Button */}
+              <button
+                onClick={() => alert("Sign Out Clicked")}
+                title="Sign Out"
+                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Link
+                href="/sign-in"
+                className="px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-indigo-600 transition"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/sign-up"
+                className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
         </div>
+
+        {/* Mobile Hamburger Button */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100"
+        >
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
-      {isOpen && (
-        <div className="md:hidden bg-white border-b border-slate-100 px-4 pt-2 pb-6 space-y-3">
-          <Link href="/" className="block py-2 text-slate-600 font-medium">Home</Link>
-          <Link href="/tuitions" className="block py-2 text-slate-600 font-medium">Browse Tuitions</Link>
-          <Link href="/pricing" className="block py-2 text-slate-600 font-medium">Pricing</Link>
-          <Link href="/about" className="block py-2 text-slate-600 font-medium">How It Works</Link>
-          <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
-            <Link href="/sign-in" className="w-full text-center py-2.5 text-sm font-semibold text-slate-700 border border-slate-200 rounded-xl">Sign In</Link>
-            <Link href="/sign-up" className="w-full text-center py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl">Sign Up</Link>
-          </div>
+      {/* Mobile Dropdown Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-3">
+          {navLinks.map((link) => (
+            <Link
+              key={link.name}
+              href={link.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-semibold text-slate-700 hover:text-indigo-600"
+            >
+              {link.name}
+            </Link>
+          ))}
+          <hr className="border-slate-200" />
+          {user ? (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-3">
+                <img
+                  src={user.image || "https://i.ibb.co.com/5GzXkwq/user.png"}
+                  alt={user.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+                <div>
+                  <p className="font-bold text-slate-900">{user.name}</p>
+                  <span className="text-xs font-bold uppercase text-indigo-600">
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+              <Link
+                href={`/dashboard/${user.role}`}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block w-full text-center py-2.5 bg-indigo-600 text-white font-semibold rounded-lg"
+              >
+                Go to Dashboard
+              </Link>
+              <Link
+                href="/dashboard/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block w-full text-center py-2.5 bg-slate-100 text-slate-800 font-semibold rounded-lg"
+              >
+                Update Profile
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Link
+                href="/sign-in"
+                className="text-center py-2.5 border border-slate-300 rounded-lg font-semibold text-slate-700"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/sign-up"
+                className="text-center py-2.5 bg-indigo-600 text-white rounded-lg font-semibold"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
         </div>
       )}
-    </nav>
+    </header>
   );
 }
