@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   BookOpen,
   LayoutDashboard,
@@ -11,22 +11,28 @@ import {
   UserCog,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
+import { authStorage, AuthUser } from "@/lib/api";
+
+const DEFAULT_AVATAR = "https://i.ibb.co.com/5GzXkwq/user.png";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
-  // আপাতত ডেমো ইউজার রাখা হয়েছে UI দেখার জন্য। Auth যুক্ত করলে এটি ডাইনামিক হবে।
-  // টেস্ট করার জন্য এটাকে null করে দেখতে পারো Unauthenticated অবস্থা কেমন দেখায়।
-  const user: {
-    name: string;
-    role: "student" | "tutor" | "admin";
-    image?: string;
-  } | null = {
-    name: "Ariful Islam",
-    role: "student",
-    image: "https://i.ibb.co.com/5GzXkwq/user.png",
-  };
+  useEffect(() => {
+    const syncUser = () => {
+      setUser(authStorage.getUser());
+    };
+
+    syncUser();
+    window.addEventListener("mentorlagbe-auth-change", syncUser);
+    return () => {
+      window.removeEventListener("mentorlagbe-auth-change", syncUser);
+    };
+  }, []);
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -37,10 +43,18 @@ export default function Navbar() {
 
   const isActive = (path: string) => pathname === path;
 
+  const handleSignOut = () => {
+    authStorage.clearSession();
+    setUser(null);
+    setMobileMenuOpen(false);
+    toast.success("Signed out successfully!");
+    router.push("/sign-in");
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Brand Logo (সব পেজে একই সাইজ ও স্টাইল থাকবে) */}
+        {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="bg-indigo-600 p-2 rounded-xl text-white group-hover:bg-indigo-700 transition">
             <BookOpen className="w-6 h-6" />
@@ -97,7 +111,7 @@ export default function Navbar() {
               {/* Avatar & Name */}
               <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
                 <img
-                  src={user.image || "https://i.ibb.co.com/5GzXkwq/user.png"}
+                  src={DEFAULT_AVATAR}
                   alt={user.name}
                   className="w-9 h-9 rounded-full object-cover border border-indigo-200"
                 />
@@ -108,7 +122,8 @@ export default function Navbar() {
 
               {/* Sign Out Button */}
               <button
-                onClick={() => alert("Sign Out Clicked")}
+                type="button"
+                onClick={handleSignOut}
                 title="Sign Out"
                 className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
               >
@@ -135,10 +150,16 @@ export default function Navbar() {
 
         {/* Mobile Hamburger Button */}
         <button
+          type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100"
+          aria-label="Toggle navigation menu"
         >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
         </button>
       </div>
 
@@ -160,7 +181,7 @@ export default function Navbar() {
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-3">
                 <img
-                  src={user.image || "https://i.ibb.co.com/5GzXkwq/user.png"}
+                  src={DEFAULT_AVATAR}
                   alt={user.name}
                   className="w-10 h-10 rounded-full object-cover"
                 />
@@ -185,17 +206,26 @@ export default function Navbar() {
               >
                 Update Profile
               </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full py-2.5 bg-rose-50 text-rose-600 font-semibold rounded-lg flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" /> Sign Out
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 pt-2">
               <Link
                 href="/sign-in"
+                onClick={() => setMobileMenuOpen(false)}
                 className="text-center py-2.5 border border-slate-300 rounded-lg font-semibold text-slate-700"
               >
                 Sign In
               </Link>
               <Link
                 href="/sign-up"
+                onClick={() => setMobileMenuOpen(false)}
                 className="text-center py-2.5 bg-indigo-600 text-white rounded-lg font-semibold"
               >
                 Sign Up
