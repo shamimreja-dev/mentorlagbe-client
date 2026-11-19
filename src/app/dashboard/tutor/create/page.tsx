@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,17 +12,19 @@ import {
   PlusCircle,
   Sparkles,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiRequest, authStorage, AuthUser } from "@/lib/api";
 
 export default function CreateTuitionPage() {
   const router = useRouter();
 
-  // ডেমো টিউটর প্ল্যান ও বর্তমান পোস্ট সংখ্যা
-  const plan: "free" | "pro" = "free";
-  const currentPostsCount = 2;
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [currentPostsCount, setCurrentPostsCount] = useState(0);
+  const [isLoadingMeta, setIsLoadingMeta] = useState(true);
+
   const maxFreePosts = 2;
-  const isLimitReached = plan === "free" && currentPostsCount >= maxFreePosts;
 
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("Higher Mathematics");
@@ -37,24 +39,102 @@ export default function CreateTuitionPage() {
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCreateTuition = (e: React.FormEvent) => {
+  useEffect(() => {
+    const syncUser = () => {
+      setCurrentUser(authStorage.getUser());
+    };
+    syncUser();
+    window.addEventListener("mentorlagbe-auth-change", syncUser);
+    return () => window.removeEventListener("mentorlagbe-auth-change", syncUser);
+  }, []);
+
+  useEffect(() => {
+    const fetchTutorPostsCount = async () => {
+      if (!authStorage.getToken()) {
+        setIsLoadingMeta(false);
+        router.push("/sign-in");
+        return;
+      }
+
+      try {
+        const res = await apiRequest<{
+          success: boolean;
+          tuitions: { _id: string }[];
+        }>("/tuitions/tutor/my", { auth: true });
+
+        setCurrentPostsCount(res.tuitions?.length || 0);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to check posting quota.";
+        toast.error(message);
+      } finally {
+        setIsLoadingMeta(false);
+      }
+    };
+
+    fetchTutorPostsCount();
+  }, [router]);
+
+  const plan = currentUser?.plan || "free";
+  const isLimitReached = plan === "free" && currentPostsCount >= maxFreePosts;
+
+  const handleCreateTuition = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentUser || !authStorage.getToken()) {
+      toast.error("Please sign in as a Tutor to post a tuition.");
+      router.push("/sign-in");
+      return;
+    }
+
+    if (currentUser.role !== "tutor") {
+      toast.error("Only users with a Tutor role can publish tuitions.");
+      return;
+    }
 
     if (isLimitReached) {
       toast.error(
-        "Free plan limit reached (2/2). Upgrade to Pro Tutor Plan ($15) for unlimited posts!"
+        `Free plan limit reached (${maxFreePosts}/${maxFreePosts}). Upgrade to Pro Tutor Plan ($15) for unlimited posts!`
       );
       return;
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        message?: string;
+      }>("/tuitions", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({
+          title: title.trim(),
+          subject,
+          classLevel: classLevel.trim(),
+          mode,
+          location: location.trim(),
+          monthlyFee: Number(monthlyFee),
+          daysPerWeek: Number(daysPerWeek),
+          bannerImage: bannerImage.trim() || undefined,
+          description: description.trim(),
+        }),
+      });
+
       toast.success(
-        "Tuition submitted for admin approval (status: pending)!"
+        res.message || "Tuition submitted for admin approval (status: pending)!"
       );
       router.push("/dashboard/tutor");
-    }, 1000);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to create tuition listing.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -78,12 +158,32 @@ export default function CreateTuitionPage() {
         </Link>
       </div>
 
+      {/* Quota Indicator */}
+      {!isLoadingMeta && plan === "free" && (
+        <div className="bg-white border border-slate-200 rounded-2xl px-5 py-3.5 flex items-center justify-between text-xs">
+          <span className="font-semibold text-slate-600">
+            Free Plan Listing Quota:{" "}
+            <strong className="text-slate-900">
+              {currentPostsCount} / {maxFreePosts}
+            </strong>{" "}
+            used
+          </span>
+          <Link
+            href="/pricing"
+            className="font-bold text-indigo-600 hover:text-indigo-700"
+          >
+            Unlock Unlimited ($15) →
+          </Link>
+        </div>
+      )}
+
       {/* Free Plan Limit Alert */}
-      {isLimitReached && (
+      {!isLoadingMeta && isLimitReached && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider bg-amber-200/80 text-amber-900 px-2.5 py-0.5 rounded-full">
-              <Sparkles className="w-3 h-3" /> Free Limit Reached ({currentPostsCount}/{maxFreePosts})
+              <Sparkles className="w-3 h-3" /> Free Limit Reached (
+              {currentPostsCount}/{maxFreePosts})
             </span>
             <p className="text-sm font-bold text-slate-900 pt-1">
               Upgrade to Pro Tutor Plan ($15) to publish unlimited tuitions.
@@ -266,10 +366,14 @@ export default function CreateTuitionPage() {
         <div className="pt-2 flex justify-end">
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition"
+            disabled={isSubmitting || isLimitReached}
+            className="inline-flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-md transition"
           >
-            <PlusCircle className="w-4 h-4" />
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <PlusCircle className="w-4 h-4" />
+            )}
             {isSubmitting ? "Publishing..." : "Submit for Approval"}
           </button>
         </div>
