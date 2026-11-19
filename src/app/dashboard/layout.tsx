@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -17,8 +17,10 @@ import {
   X,
   ShieldCheck,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { authStorage, AuthUser, UserRole } from "@/lib/api";
 
 export default function DashboardLayout({
   children,
@@ -28,33 +30,59 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // ডেমো ইউজার ও রোল ('student' | 'tutor' | 'admin')
-  // পরবর্তীতে auth session থেকে ডাইনামিক হবে
-  const [role, setRole] = useState<"student" | "tutor" | "admin">("admin");
-  const plan: "free" | "pro" = "pro";
+  useEffect(() => {
+    const syncSession = () => {
+      const current = authStorage.getUser();
+      const token = authStorage.getToken();
 
-  const currentUser = {
-    name:
-      role === "admin"
-        ? "Admin User"
-        : role === "tutor"
-        ? "Prof. Tanvir Ahmed"
-        : "Ariful Islam",
-    email:
-      role === "admin"
-        ? "admin@mentorlagbe.com"
-        : role === "tutor"
-        ? "tutor@mentorlagbe.com"
-        : "student@mentorlagbe.com",
-  };
+      if (!current || !token) {
+        setUser(null);
+        setIsCheckingAuth(false);
+        router.replace("/sign-in");
+        return;
+      }
+
+      setUser(current);
+      setIsCheckingAuth(false);
+    };
+
+    syncSession();
+    window.addEventListener("mentorlagbe-auth-change", syncSession);
+    return () => {
+      window.removeEventListener("mentorlagbe-auth-change", syncSession);
+    };
+  }, [router]);
 
   const handleLogout = () => {
+    authStorage.clearSession();
     toast.success("Signed out successfully!");
     router.push("/sign-in");
   };
 
-  // রোল অনুযায়ী নেভিগেশন আইটেম
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-9 h-9 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const role: UserRole = user.role || "student";
+  const plan = user.plan || "free";
+  const initials = (user.name || "ML")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   const navItems =
     role === "admin"
       ? [
@@ -80,35 +108,35 @@ export default function DashboardLayout({
           },
         ]
       : role === "tutor"
-      ? [
-          {
-            name: "My Tuitions",
-            href: "/dashboard/tutor",
-            icon: BookOpen,
-          },
-          {
-            name: "Post Tuition",
-            href: "/dashboard/tutor/create",
-            icon: FilePlus2,
-          },
-          {
-            name: "Applications",
-            href: "/dashboard/tutor/applications",
-            icon: ClipboardList,
-          },
-        ]
-      : [
-          {
-            name: "My Applications",
-            href: "/dashboard/student",
-            icon: GraduationCap,
-          },
-          {
-            name: "Browse Tuitions",
-            href: "/tuitions",
-            icon: BookOpen,
-          },
-        ];
+        ? [
+            {
+              name: "My Tuitions",
+              href: "/dashboard/tutor",
+              icon: BookOpen,
+            },
+            {
+              name: "Post Tuition",
+              href: "/dashboard/tutor/create",
+              icon: FilePlus2,
+            },
+            {
+              name: "Applications",
+              href: "/dashboard/tutor/applications",
+              icon: ClipboardList,
+            },
+          ]
+        : [
+            {
+              name: "My Applications",
+              href: "/dashboard/student",
+              icon: GraduationCap,
+            },
+            {
+              name: "Browse Tuitions",
+              href: "/tuitions",
+              icon: BookOpen,
+            },
+          ];
 
   const commonItems = [
     {
@@ -146,6 +174,7 @@ export default function DashboardLayout({
               </span>
             </Link>
             <button
+              type="button"
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
               aria-label="Close sidebar"
@@ -158,24 +187,17 @@ export default function DashboardLayout({
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-sm shrink-0">
-                {currentUser.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
+                {initials}
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold text-slate-900 truncate">
-                  {currentUser.name}
+                  {user.name}
                 </p>
-                <p className="text-xs text-slate-500 truncate">
-                  {currentUser.email}
-                </p>
+                <p className="text-xs text-slate-500 truncate">{user.email}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-indigo-100 text-indigo-700">
                 <ShieldCheck className="w-3 h-3" /> {role}
               </span>
@@ -188,29 +210,6 @@ export default function DashboardLayout({
               >
                 <Sparkles className="w-3 h-3" /> {plan}
               </span>
-            </div>
-          </div>
-
-          {/* Quick Role Switcher for Testing Layout */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2">
-              Preview Role View
-            </p>
-            <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl">
-              {(["student", "tutor", "admin"] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  className={`py-1.5 rounded-lg text-xs font-bold capitalize transition ${
-                    role === r
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -285,6 +284,7 @@ export default function DashboardLayout({
         <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100"
               aria-label="Open sidebar"
@@ -297,14 +297,16 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/pricing"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
-            >
-              Upgrade Plan
-            </Link>
+            {plan !== "pro" && role !== "admin" && (
+              <Link
+                href="/pricing"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+              >
+                Upgrade Plan
+              </Link>
+            )}
             <span className="text-xs font-semibold text-slate-500 hidden md:inline">
-              {currentUser.email}
+              {user.email}
             </span>
           </div>
         </header>
