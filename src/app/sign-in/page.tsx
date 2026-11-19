@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowRight, LogIn } from "lucide-react";
 import { toast } from "sonner";
+import { apiRequest, authStorage, AuthUser } from "@/lib/api";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -13,15 +14,38 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        message: string;
+        token: string;
+        user: AuthUser;
+      }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+
+      authStorage.setSession(res.token, res.user);
+      toast.success(res.message || "Welcome back! Signed in successfully.");
+
+      if (res.user.role === "admin") {
+        router.push("/dashboard/admin");
+      } else if (res.user.role === "tutor") {
+        router.push("/dashboard/tutor");
+      } else {
+        router.push("/dashboard/student");
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to sign in.";
+      toast.error(message);
+    } finally {
       setIsSubmitting(false);
-      toast.success("Welcome back! Signed in successfully.");
-      router.push("/tuitions");
-    }, 1000);
+    }
   };
 
   const fillDemoUser = (demoEmail: string, demoPass: string, label: string) => {
@@ -54,21 +78,39 @@ export default function SignInPage() {
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => fillDemoUser("student@mentorlagbe.com", "123456", "Student")}
+              onClick={() =>
+                fillDemoUser(
+                  "ariful.student@mentorlagbe.com",
+                  "MentorLagbe@123",
+                  "Student"
+                )
+              }
               className="py-2 px-2 bg-white hover:bg-indigo-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 transition"
             >
               Student
             </button>
             <button
               type="button"
-              onClick={() => fillDemoUser("tutor@mentorlagbe.com", "123456", "Tutor")}
+              onClick={() =>
+                fillDemoUser(
+                  "tanvir.tutor@mentorlagbe.com",
+                  "MentorLagbe@123",
+                  "Pro Tutor"
+                )
+              }
               className="py-2 px-2 bg-white hover:bg-indigo-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 transition"
             >
               Tutor
             </button>
             <button
               type="button"
-              onClick={() => fillDemoUser("admin@mentorlagbe.com", "123456", "Admin")}
+              onClick={() =>
+                fillDemoUser(
+                  "admin@mentorlagbe.com",
+                  "MentorLagbe@123",
+                  "Admin"
+                )
+              }
               className="py-2 px-2 bg-white hover:bg-indigo-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 transition"
             >
               Admin
@@ -115,7 +157,7 @@ export default function SignInPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3.5 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 group"
+            className="w-full py-3.5 mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 group"
           >
             {isSubmitting ? "Signing In..." : "Sign In"}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
