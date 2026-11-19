@@ -1,75 +1,201 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  BookOpen,
-  CheckCircle,
   Clock,
   DollarSign,
   MapPin,
   ShieldCheck,
-  User,
-  Users,
-  Calendar,
-  Phone,
-  FileText,
+  Sparkles,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiRequest, authStorage, AuthUser } from "@/lib/api";
+
+interface TutorProfileInfo {
+  _id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  bio?: string;
+  plan?: "free" | "pro";
+  isVerifiedTutor?: boolean;
+}
+
+interface TuitionDetail {
+  _id: string;
+  title: string;
+  subject: string;
+  classLevel: string;
+  mode: "Online" | "Offline";
+  location?: string;
+  monthlyFee: number;
+  daysPerWeek: number;
+  bannerImage?: string;
+  description: string;
+  tutorName: string;
+  tutorVerified?: boolean;
+  tutorId?: string | TutorProfileInfo;
+}
+
+const DEFAULT_BANNER =
+  "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800";
+
+const DEFAULT_TUTOR_AVATAR =
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300";
 
 export default function TuitionDetailsPage() {
   const params = useParams();
-  const id = params?.id;
+  const id = String(params?.id || "");
 
-  // ডেমো ইউজার (Auth কানেক্ট হওয়ার পর ডাইনামিক হবে)
-  // রোল টেস্ট করতে role: 'student' এর বদলে 'tutor' বা 'admin' দিয়ে দেখতে পারো।
-  const user = {
-    name: "Ariful Islam",
-    email: "ariful@gmail.com",
-    role: "student", // 'student' | 'tutor' | 'admin'
-    phone: "+8801700000000",
-  };
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [tuition, setTuition] = useState<TuitionDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  // ডেমো টিউশন ডিটেইলস ডেটা
-  const tuition = {
-    id: id || "1",
-    title: "HSC Higher Math & Physics 1-on-1 Mentorship",
-    subject: "Higher Mathematics",
-    classLevel: "HSC (Class 11-12)",
-    mode: "Online",
-    location: "Online via Zoom / Google Meet",
-    monthlyFee: 35,
-    daysPerWeek: 3,
-    bannerImage: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800",
-    description:
-      "This comprehensive 1-on-1 mentorship program is specially designed for HSC candidates aiming for A+ in Higher Mathematics and Physics. We will cover complex calculus, vectors, trigonometry, mechanics, and past paper problem-solving techniques with regular mock tests.",
-    tutorName: "Prof. Tanvir Ahmed",
-    tutorEmail: "tanvir.ahmed@gmail.com",
-    tutorBio: "Senior Mathematics Professor with 10+ years of experience guiding HSC and O/A Level students to academic excellence.",
-    tutorImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
-  };
-
-  // Application Form State
   const [preferredSchedule, setPreferredSchedule] = useState("");
-  const [studentPhone, setStudentPhone] = useState(user.phone || "");
+  const [studentPhone, setStudentPhone] = useState("");
   const [studentNote, setStudentNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
 
-  // Application Submit Handler
-  const handleApply = (e: React.FormEvent) => {
+  useEffect(() => {
+    const syncUser = () => {
+      const u = authStorage.getUser();
+      setCurrentUser(u);
+      if (u?.phone) {
+        setStudentPhone((prev) => prev || u.phone);
+      }
+    };
+
+    syncUser();
+    window.addEventListener("mentorlagbe-auth-change", syncUser);
+    return () => window.removeEventListener("mentorlagbe-auth-change", syncUser);
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchTuitionDetail = async () => {
+      setIsLoading(true);
+      setNotFound(false);
+      try {
+        const res = await apiRequest<{
+          success: boolean;
+          tuition: TuitionDetail;
+        }>(`/tuitions/${id}`);
+
+        setTuition(res.tuition);
+      } catch (error) {
+        setNotFound(true);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load tuition details.";
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTuitionDetail();
+  }, [id]);
+
+  const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (user.role !== "student") {
+
+    if (!currentUser) {
+      toast.error("Please sign in as a Student to apply for tuition.");
+      return;
+    }
+
+    if (currentUser.role !== "student") {
       toast.error("Only users with a Student role can apply for tuitions!");
       return;
     }
 
+    if (!tuition?._id) return;
+
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        message: string;
+      }>("/applications", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({
+          tuitionId: tuition._id,
+          phone: studentPhone,
+          preferredSchedule,
+          note: studentNote,
+        }),
+      });
+
+      setHasApplied(true);
+      toast.success(
+        res.message || "Tuition application submitted successfully!"
+      );
+      setPreferredSchedule("");
+      setStudentNote("");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to submit application.";
+      toast.error(message);
+    } finally {
       setIsSubmitting(false);
-      toast.success("Tuition application submitted successfully!");
-      // এখানে ব্যাকএন্ডে API রিকোয়েস্ট যাবে অ্যাপ্লিকেশন সেভ করার জন্য
-    }, 1000);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-3" />
+        <p className="text-sm font-medium text-slate-600">
+          Loading tuition details...
+        </p>
+      </div>
+    );
+  }
+
+  if (notFound || !tuition) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-3xl border border-slate-200 text-center space-y-4">
+          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
+          <h2 className="text-xl font-extrabold text-slate-900">
+            Tuition Not Found
+          </h2>
+          <p className="text-sm text-slate-600">
+            This tuition listing may have been removed or is not yet approved.
+          </p>
+          <Link
+            href="/tuitions"
+            className="inline-block px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition"
+          >
+            Back to Tuitions
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const populatedTutor =
+    typeof tuition.tutorId === "object" && tuition.tutorId !== null
+      ? tuition.tutorId
+      : null;
+
+  const isVerified =
+    Boolean(tuition.tutorVerified) ||
+    Boolean(populatedTutor?.isVerifiedTutor) ||
+    populatedTutor?.plan === "pro";
+
+  const tutorBio =
+    populatedTutor?.bio ||
+    "Experienced mentor on MentorLagbe helping students achieve clear conceptual mastery and strong academic results.";
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -80,7 +206,7 @@ export default function TuitionDetailsPage() {
             {/* Banner Image */}
             <div className="relative h-80 sm:h-96 rounded-3xl overflow-hidden shadow-md bg-slate-200">
               <img
-                src={tuition.bannerImage}
+                src={tuition.bannerImage || DEFAULT_BANNER}
                 alt={tuition.title}
                 className="w-full h-full object-cover"
               />
@@ -114,8 +240,12 @@ export default function TuitionDetailsPage() {
                     <Clock className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 font-medium">Schedule</p>
-                    <p className="text-sm font-bold text-slate-800">{tuition.daysPerWeek} Days / Week</p>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Schedule
+                    </p>
+                    <p className="text-sm font-bold text-slate-800">
+                      {tuition.daysPerWeek} Days / Week
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -123,8 +253,12 @@ export default function TuitionDetailsPage() {
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 font-medium">Mode / Location</p>
-                    <p className="text-sm font-bold text-slate-800">{tuition.mode}</p>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Mode / Location
+                    </p>
+                    <p className="text-sm font-bold text-slate-800">
+                      {tuition.location || tuition.mode}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -132,16 +266,22 @@ export default function TuitionDetailsPage() {
                     <DollarSign className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 font-medium">Monthly Fee</p>
-                    <p className="text-sm font-bold text-slate-800">${tuition.monthlyFee}</p>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Monthly Fee
+                    </p>
+                    <p className="text-sm font-bold text-slate-800">
+                      ${tuition.monthlyFee}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Description */}
               <div className="space-y-3">
-                <h3 className="text-lg font-bold text-slate-900">About This Tuition</h3>
-                <p className="text-slate-600 leading-relaxed text-sm sm:text-base">
+                <h3 className="text-lg font-bold text-slate-900">
+                  About This Tuition
+                </h3>
+                <p className="text-slate-600 leading-relaxed text-sm sm:text-base whitespace-pre-line">
                   {tuition.description}
                 </p>
               </div>
@@ -149,18 +289,22 @@ export default function TuitionDetailsPage() {
               {/* Tutor Profile Summary Card */}
               <div className="pt-6 border-t border-slate-100 flex items-center gap-4">
                 <img
-                  src={tuition.tutorImage}
+                  src={DEFAULT_TUTOR_AVATAR}
                   alt={tuition.tutorName}
                   className="w-16 h-16 rounded-full object-cover border-2 border-indigo-600"
                 />
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-slate-900 text-base">{tuition.tutorName}</h4>
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> Verified Tutor
-                    </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-bold text-slate-900 text-base">
+                      {tuition.tutorName}
+                    </h4>
+                    {isVerified && (
+                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5" /> Verified Tutor
+                      </span>
+                    )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">{tuition.tutorBio}</p>
+                  <p className="text-xs text-slate-500 mt-1">{tutorBio}</p>
                 </div>
               </div>
             </div>
@@ -170,92 +314,131 @@ export default function TuitionDetailsPage() {
           <div className="lg:col-span-4">
             <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm sticky top-28 space-y-6">
               <div>
-                <h3 className="text-xl font-extrabold text-slate-900">Apply for Tuition</h3>
-                <p className="text-xs text-slate-500 mt-1">Submit your details to book this batch or mentorship.</p>
+                <h3 className="text-xl font-extrabold text-slate-900">
+                  Apply for Tuition
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Submit your details to book this batch or mentorship.
+                </p>
               </div>
 
-              {user.role === "student" ? (
-                <form onSubmit={handleApply} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Your Name
-                    </label>
-                    <input
-                      type="text"
-                      disabled
-                      value={user.name}
-                      className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 cursor-not-allowed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Your Email
-                    </label>
-                    <input
-                      type="email"
-                      disabled
-                      value={user.email}
-                      className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 cursor-not-allowed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="+88017xxxxxxxx"
-                      value={studentPhone}
-                      onChange={(e) => setStudentPhone(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Preferred Schedule *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Evening (4 PM - 6 PM)"
-                      value={preferredSchedule}
-                      onChange={(e) => setPreferredSchedule(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Learning Note (Optional)
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Mention any specific topic you want to focus on..."
-                      value={studentNote}
-                      onChange={(e) => setStudentNote(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+              {!currentUser ? (
+                <div className="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-5 text-center space-y-3">
+                  <p className="text-sm font-semibold text-slate-800">
+                    Sign in with a Student account to apply for this tuition.
+                  </p>
+                  <Link
+                    href="/sign-in"
+                    className="inline-block w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition"
                   >
-                    {isSubmitting ? "Submitting..." : "Submit Application"}
-                  </button>
-                </form>
+                    Sign In to Apply
+                  </Link>
+                </div>
+              ) : currentUser.role === "student" ? (
+                <>
+                  {currentUser.plan === "pro" && (
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold">
+                      <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        Pro Student active: Your application will be highlighted
+                        as Priority!
+                      </span>
+                    </div>
+                  )}
+
+                  {hasApplied && (
+                    <div className="px-3.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+                      Application submitted! Track status in your Student
+                      Dashboard.
+                    </div>
+                  )}
+
+                  <form onSubmit={handleApply} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Your Name
+                      </label>
+                      <input
+                        type="text"
+                        disabled
+                        value={currentUser.name}
+                        className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 cursor-not-allowed"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Your Email
+                      </label>
+                      <input
+                        type="email"
+                        disabled
+                        value={currentUser.email}
+                        className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 cursor-not-allowed"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="+88017xxxxxxxx"
+                        value={studentPhone}
+                        onChange={(e) => setStudentPhone(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Preferred Schedule *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Evening (4 PM - 6 PM)"
+                        value={preferredSchedule}
+                        onChange={(e) => setPreferredSchedule(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Learning Note (Optional)
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Mention any specific topic you want to focus on..."
+                        value={studentNote}
+                        onChange={(e) => setStudentNote(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting ? "Submitting..." : "Submit Application"}
+                    </button>
+                  </form>
+                </>
               ) : (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center space-y-3">
                   <p className="text-xs font-bold uppercase text-amber-800 tracking-wider">
                     Access Restricted
                   </p>
                   <p className="text-sm text-amber-900">
-                    You are logged in as a <strong className="uppercase">{user.role}</strong>. Only users with the <strong className="underline">Student</strong> role are allowed to apply for tuition batches.
+                    You are logged in as a{" "}
+                    <strong className="uppercase">{currentUser.role}</strong>.
+                    Only users with the{" "}
+                    <strong className="underline">Student</strong> role are
+                    allowed to apply for tuition batches.
                   </p>
                 </div>
               )}
