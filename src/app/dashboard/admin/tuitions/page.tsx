@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   XCircle,
@@ -9,93 +10,128 @@ import {
   Trash2,
   ExternalLink,
   Search,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiRequest, authStorage } from "@/lib/api";
 
 type TuitionStatus = "Pending" | "Approved" | "Rejected";
 
 interface TuitionListing {
-  id: string;
+  _id: string;
   title: string;
   tutorName: string;
   subject: string;
   classLevel: string;
   mode: "Online" | "Offline";
   monthlyFee: number;
-  status: TuitionStatus;
+  status?: TuitionStatus;
+  approvalStatus?: TuitionStatus;
 }
 
 export default function AdminTuitionsPage() {
+  const router = useRouter();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | TuitionStatus>("All");
+  const [tuitions, setTuitions] = useState<TuitionListing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
 
-  const [tuitions, setTuitions] = useState<TuitionListing[]>([
-    {
-      id: "1",
-      title: "HSC Higher Math & Physics 1-on-1 Mentorship",
-      tutorName: "Prof. Tanvir Ahmed",
-      subject: "Higher Mathematics",
-      classLevel: "HSC (Class 11-12)",
-      mode: "Online",
-      monthlyFee: 35,
-      status: "Approved",
-    },
-    {
-      id: "t-101",
-      title: "HSC Higher Math Crash Course",
-      tutorName: "Prof. Tanvir Ahmed",
-      subject: "Higher Mathematics",
-      classLevel: "HSC (Class 11-12)",
-      mode: "Online",
-      monthlyFee: 35,
-      status: "Pending",
-    },
-    {
-      id: "t-102",
-      title: "Spoken English & Fluency Batch",
-      tutorName: "Nusrat Jahan",
-      subject: "IELTS & English",
-      classLevel: "College / Admission",
-      mode: "Offline",
-      monthlyFee: 30,
-      status: "Pending",
-    },
-    {
-      id: "2",
-      title: "O-Level Physics & Chemistry Intensive Batch",
-      tutorName: "Dr. Farhana Rahman",
-      subject: "Physics",
-      classLevel: "O-Level",
-      mode: "Offline",
-      monthlyFee: 50,
-      status: "Approved",
-    },
-    {
-      id: "t-103",
-      title: "Unverified Quick Test Prep",
-      tutorName: "Sadia Sultana",
-      subject: "Biology",
-      classLevel: "Class 9-10",
-      mode: "Online",
-      monthlyFee: 20,
-      status: "Rejected",
-    },
-  ]);
+  useEffect(() => {
+    const fetchAllTuitions = async () => {
+      if (!authStorage.getToken()) {
+        setIsLoading(false);
+        router.push("/sign-in");
+        return;
+      }
 
-  const handleStatusChange = (id: string, newStatus: TuitionStatus) => {
-    setTuitions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
-    );
-    toast.success(`Tuition status set to ${newStatus}`);
+      setIsLoading(true);
+      try {
+        const res = await apiRequest<{
+          success: boolean;
+          tuitions: TuitionListing[];
+        }>("/tuitions?status=All", {
+          auth: true,
+        });
+
+        setTuitions(res.tuitions || []);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to load tuitions.";
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllTuitions();
+  }, [router]);
+
+  const handleStatusChange = async (id: string, newStatus: TuitionStatus) => {
+    setActionId(id);
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        message?: string;
+        tuition?: TuitionListing;
+      }>(`/admin/tuitions/${id}/status`, {
+        method: "PATCH",
+        auth: true,
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      setTuitions((prev) =>
+        prev.map((t) =>
+          t._id === id
+            ? {
+                ...t,
+                status: res.tuition?.status || newStatus,
+                approvalStatus: res.tuition?.approvalStatus || newStatus,
+              }
+            : t
+        )
+      );
+      toast.success(res.message || `Tuition status set to ${newStatus}`);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to update tuition status.";
+      toast.error(message);
+    } finally {
+      setActionId(null);
+    }
   };
 
-  const handleDeleteTuition = (id: string, title: string) => {
-    setTuitions((prev) => prev.filter((t) => t.id !== id));
-    toast.success(`Deleted "${title}"`);
+  const handleDeleteTuition = async (id: string, title: string) => {
+    setActionId(id);
+    try {
+      const res = await apiRequest<{ success: boolean; message?: string }>(
+        `/tuitions/${id}`,
+        {
+          method: "DELETE",
+          auth: true,
+        }
+      );
+
+      setTuitions((prev) => prev.filter((t) => t._id !== id));
+      toast.success(res.message || `Deleted "${title}"`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete tuition.";
+      toast.error(message);
+    } finally {
+      setActionId(null);
+    }
   };
+
+  const getTuitionStatus = (t: TuitionListing): TuitionStatus =>
+    t.status || t.approvalStatus || "Pending";
 
   const filteredTuitions = tuitions.filter((t) => {
-    const matchesStatus = statusFilter === "All" || t.status === statusFilter;
+    const currentStatus = getTuitionStatus(t);
+    const matchesStatus = statusFilter === "All" || currentStatus === statusFilter;
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
       !q ||
@@ -135,7 +171,8 @@ export default function AdminTuitionsPage() {
           Tuitions Moderation
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Approve or reject tutor-submitted batches before they go live for students.
+          Approve or reject tutor-submitted batches before they go live for
+          students.
         </p>
       </div>
 
@@ -172,85 +209,111 @@ export default function AdminTuitionsPage() {
 
       {/* Tuitions Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th className="py-3.5 px-6">Tuition & Tutor</th>
-                <th className="py-3.5 px-6">Subject & Mode</th>
-                <th className="py-3.5 px-6">Fee</th>
-                <th className="py-3.5 px-6">Status</th>
-                <th className="py-3.5 px-6 text-right">Moderation</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {filteredTuitions.length > 0 ? (
-                filteredTuitions.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-4 px-6">
-                      <Link
-                        href={`/tuitions/${t.id}`}
-                        className="font-bold text-slate-900 hover:text-indigo-600 inline-flex items-center gap-1 transition"
+        {isLoading ? (
+          <div className="py-16 px-6 flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-2" />
+            <p className="text-xs font-medium text-slate-500">
+              Loading tuitions for moderation...
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-6">Tuition & Tutor</th>
+                  <th className="py-3.5 px-6">Subject & Mode</th>
+                  <th className="py-3.5 px-6">Fee</th>
+                  <th className="py-3.5 px-6">Status</th>
+                  <th className="py-3.5 px-6 text-right">Moderation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {filteredTuitions.length > 0 ? (
+                  filteredTuitions.map((t) => {
+                    const currentStatus = getTuitionStatus(t);
+                    const isBusy = actionId === t._id;
+
+                    return (
+                      <tr
+                        key={t._id}
+                        className="hover:bg-slate-50/70 transition"
                       >
-                        <span>{t.title}</span>
-                        <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                      </Link>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Tutor: {t.tutorName} • {t.classLevel}
-                      </p>
-                    </td>
-                    <td className="py-4 px-6 text-xs font-semibold text-slate-700">
-                      {t.subject} • {t.mode}
-                    </td>
-                    <td className="py-4 px-6 font-bold text-slate-900">
-                      ${t.monthlyFee}/mo
-                    </td>
-                    <td className="py-4 px-6">{getBadge(t.status)}</td>
-                    <td className="py-4 px-6 text-right">
-                      <div className="inline-flex items-center justify-end gap-2">
-                        {t.status !== "Approved" && (
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(t.id, "Approved")}
-                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition"
+                        <td className="py-4 px-6">
+                          <Link
+                            href={`/tuitions/${t._id}`}
+                            className="font-bold text-slate-900 hover:text-indigo-600 inline-flex items-center gap-1 transition"
                           >
-                            Approve
-                          </button>
-                        )}
-                        {t.status !== "Rejected" && (
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(t.id, "Rejected")}
-                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition"
-                          >
-                            Reject
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTuition(t.id, t.title)}
-                          className="p-2 rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 transition"
-                          aria-label={`Delete ${t.title}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                            <span>{t.title}</span>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                          </Link>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Tutor: {t.tutorName} • {t.classLevel}
+                          </p>
+                        </td>
+                        <td className="py-4 px-6 text-xs font-semibold text-slate-700">
+                          {t.subject} • {t.mode}
+                        </td>
+                        <td className="py-4 px-6 font-bold text-slate-900">
+                          ${t.monthlyFee}/mo
+                        </td>
+                        <td className="py-4 px-6">{getBadge(currentStatus)}</td>
+                        <td className="py-4 px-6 text-right">
+                          <div className="inline-flex items-center justify-end gap-2">
+                            {currentStatus !== "Approved" && (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() =>
+                                  handleStatusChange(t._id, "Approved")
+                                }
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white transition"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {currentStatus !== "Rejected" && (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() =>
+                                  handleStatusChange(t._id, "Rejected")
+                                }
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 disabled:opacity-60 text-amber-800 border border-amber-200 transition"
+                              >
+                                Reject
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() =>
+                                handleDeleteTuition(t._id, t.title)
+                              }
+                              className="p-2 rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 disabled:opacity-60 transition"
+                              aria-label={`Delete ${t.title}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-10 px-6 text-center text-sm text-slate-500"
+                    >
+                      No tuitions found matching your filter.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="py-10 px-6 text-center text-sm text-slate-500"
-                  >
-                    No tuitions found matching your filter.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
