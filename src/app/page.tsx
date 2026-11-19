@@ -6,79 +6,137 @@ import {
   ArrowRight,
   MapPin,
 } from "lucide-react";
+import { apiRequest } from "@/lib/api";
 
-export default function HomePage() {
-  // ডেমো ফিচার্ড টিউশন লিস্ট
-  const featuredTuitions = [
-    {
-      id: "1",
-      title: "HSC Higher Math & Physics 1-on-1 Mentorship",
-      subject: "Higher Mathematics",
-      classLevel: "HSC (Class 11-12)",
-      mode: "Online",
-      monthlyFee: 35,
-      tutorName: "Prof. Tanvir Ahmed",
-      bannerImage:
-        "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=600",
-    },
-    {
-      id: "2",
-      title: "O-Level Physics & Chemistry Intensive Batch",
-      subject: "Physics",
-      classLevel: "O-Level",
-      mode: "Offline",
-      location: "Dhanmondi, Dhaka",
-      monthlyFee: 50,
-      tutorName: "Sumaiya Rahman",
-      bannerImage:
-        "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=600",
-    },
-    {
-      id: "3",
-      title: "Full-Stack Web Development with Next.js",
-      subject: "Programming",
-      classLevel: "University / Professional",
-      mode: "Online",
-      monthlyFee: 60,
-      tutorName: "Imtiaz Hossain",
-      bannerImage:
-        "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=600",
-    },
-    {
-      id: "4",
-      title: "IELTS Academic Band 8+ Masterclass",
-      subject: "IELTS & English",
-      classLevel: "College / Admission",
-      mode: "Online",
-      monthlyFee: 40,
-      tutorName: "Nusrat Jahan",
-      bannerImage:
-        "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=600",
-    },
-    {
-      id: "5",
-      title: "Class 9-10 General Science & Biology Batch",
-      subject: "Biology",
-      classLevel: "SSC (Class 9-10)",
-      mode: "Offline",
-      location: "Uttara, Dhaka",
-      monthlyFee: 25,
-      tutorName: "Dr. Nazmul Haque",
-      bannerImage:
-        "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&q=80&w=600",
-    },
-    {
-      id: "6",
-      title: "Python Programming & Data Science for Beginners",
-      subject: "Programming",
-      classLevel: "High School / University",
-      mode: "Online",
-      monthlyFee: 45,
-      tutorName: "Sadia Sultana",
-      bannerImage:
-        "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=600",
-    },
-  ];
+interface FeaturedTuitionCard {
+  id: string;
+  title: string;
+  subject: string;
+  classLevel: string;
+  mode: "Online" | "Offline";
+  location?: string;
+  monthlyFee: number;
+  tutorName: string;
+  bannerImage: string;
+}
+
+interface ApiTuitionItem {
+  _id: string;
+  title: string;
+  subject: string;
+  classLevel: string;
+  mode: "Online" | "Offline";
+  location?: string;
+  monthlyFee: number;
+  tutorName: string;
+  bannerImage?: string;
+}
+
+const DEFAULT_BANNER =
+  "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=600";
+
+const FALLBACK_FEATURED_TUITIONS: FeaturedTuitionCard[] = [
+  {
+    id: "1",
+    title: "HSC Higher Math & Physics 1-on-1 Mentorship",
+    subject: "Higher Mathematics",
+    classLevel: "HSC (Class 11-12)",
+    mode: "Online",
+    monthlyFee: 35,
+    tutorName: "Prof. Tanvir Ahmed",
+    bannerImage:
+      "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=600",
+  },
+  {
+    id: "2",
+    title: "O-Level Physics & Chemistry Intensive Batch",
+    subject: "Physics",
+    classLevel: "O-Level",
+    mode: "Offline",
+    location: "Dhanmondi, Dhaka",
+    monthlyFee: 50,
+    tutorName: "Sumaiya Rahman",
+    bannerImage:
+      "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=600",
+  },
+  {
+    id: "3",
+    title: "Full-Stack Web Development with Next.js",
+    subject: "Programming",
+    classLevel: "University / Professional",
+    mode: "Online",
+    monthlyFee: 60,
+    tutorName: "Imtiaz Hossain",
+    bannerImage:
+      "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=600",
+  },
+  {
+    id: "4",
+    title: "IELTS Academic Band 8+ Masterclass",
+    subject: "IELTS & English",
+    classLevel: "College / Admission",
+    mode: "Online",
+    monthlyFee: 40,
+    tutorName: "Nusrat Jahan",
+    bannerImage:
+      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=600",
+  },
+  {
+    id: "5",
+    title: "Class 9-10 General Science & Biology Batch",
+    subject: "Biology",
+    classLevel: "SSC (Class 9-10)",
+    mode: "Offline",
+    location: "Uttara, Dhaka",
+    monthlyFee: 25,
+    tutorName: "Dr. Nazmul Haque",
+    bannerImage:
+      "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&q=80&w=600",
+  },
+  {
+    id: "6",
+    title: "Python Programming & Data Science for Beginners",
+    subject: "Programming",
+    classLevel: "High School / University",
+    mode: "Online",
+    monthlyFee: 45,
+    tutorName: "Sadia Sultana",
+    bannerImage:
+      "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=600",
+  },
+];
+
+async function getFeaturedTuitions(): Promise<FeaturedTuitionCard[]> {
+  try {
+    const res = await apiRequest<{
+      success: boolean;
+      tuitions?: ApiTuitionItem[];
+    }>("/tuitions?status=Approved", {
+      cache: "no-store",
+    });
+
+    if (res.tuitions && res.tuitions.length > 0) {
+      return res.tuitions.slice(0, 6).map((t) => ({
+        id: t._id,
+        title: t.title,
+        subject: t.subject,
+        classLevel: t.classLevel,
+        mode: t.mode,
+        location: t.location,
+        monthlyFee: t.monthlyFee,
+        tutorName: t.tutorName,
+        bannerImage: t.bannerImage || DEFAULT_BANNER,
+      }));
+    }
+  } catch {
+    // Fallback to curated showcase listings if backend is temporarily unreachable
+  }
+
+  return FALLBACK_FEATURED_TUITIONS;
+}
+
+export default async function HomePage() {
+  const featuredTuitions = await getFeaturedTuitions();
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -224,7 +282,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Register & Choose Role</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                Sign up easily via BetterAuth as a Student looking for academic guidance or as a Tutor wanting to host batches.
+                Sign up easily as a Student looking for academic guidance or as a Tutor wanting to host batches.
               </p>
             </div>
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 relative">
@@ -233,7 +291,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Search & Apply or Post</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                Students browse approved tuitions with advanced filters and apply instantly. Tutors post batches with ImgBB banners.
+                Students browse approved tuitions with advanced filters and apply instantly. Tutors post batches with custom banners.
               </p>
             </div>
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 relative">
@@ -299,7 +357,7 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Card 2: Pro Plan ($15) with RECOMMENDED badge */}
+          {/* Card 2: Pro Plan ($15 Tutor / $10 Student) with RECOMMENDED badge */}
           <div className="bg-white rounded-3xl border-2 border-indigo-600 p-8 shadow-xl flex flex-col relative">
             <span className="absolute top-4 right-4 bg-indigo-600 text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider shadow">
               RECOMMENDED
@@ -312,21 +370,21 @@ export default function HomePage() {
               Unlock unlimited potential with advanced tools and priority visibility.
             </p>
             <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-4xl font-extrabold text-slate-900">$15</span>
+              <span className="text-4xl font-extrabold text-slate-900">$10 - $15</span>
               <span className="text-slate-500 font-medium">/ one-time</span>
             </div>
             <ul className="space-y-4 text-sm text-slate-700 mb-8 flex-grow">
               <li className="flex items-center gap-3">
                 <CheckCircle className="w-5 h-5 text-indigo-600 shrink-0" />
-                <span><strong>Unlimited</strong> tuition posts & priority placement</span>
+                <span><strong>Unlimited</strong> tuition posts &amp; priority placement</span>
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle className="w-5 h-5 text-indigo-600 shrink-0" />
-                <span>Verified Pro Badge on profile & listings</span>
+                <span>Verified Pro Badge on profile &amp; listings</span>
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle className="w-5 h-5 text-indigo-600 shrink-0" />
-                <span>Priority booking & direct application review</span>
+                <span>Priority booking &amp; direct application review</span>
               </li>
             </ul>
             <Link
@@ -339,7 +397,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Extra Section 2 — Top Subjects & Statistics (Updated background to indigo-950 for better separation from footer) */}
+      {/* 5. Extra Section 2 — Top Subjects & Statistics */}
       <section className="py-20 bg-indigo-950 text-white px-4 sm:px-6 lg:px-8 border-t border-indigo-900">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -352,7 +410,7 @@ export default function HomePage() {
               <p className="text-xs text-indigo-300 mt-1">120+ Active Batches</p>
             </Link>
             <Link href="/tuitions?search=Physics" className="bg-indigo-900/60 hover:bg-indigo-600 p-6 rounded-2xl border border-indigo-800 text-center transition group">
-              <h3 className="text-lg font-bold group-hover:text-white">Physics & Chem</h3>
+              <h3 className="text-lg font-bold group-hover:text-white">Physics &amp; Chem</h3>
               <p className="text-xs text-indigo-300 mt-1">95+ Active Batches</p>
             </Link>
             <Link href="/tuitions?search=Programming" className="bg-indigo-900/60 hover:bg-indigo-600 p-6 rounded-2xl border border-indigo-800 text-center transition group">
@@ -360,7 +418,7 @@ export default function HomePage() {
               <p className="text-xs text-indigo-300 mt-1">80+ Active Batches</p>
             </Link>
             <Link href="/tuitions?search=IELTS" className="bg-indigo-900/60 hover:bg-indigo-600 p-6 rounded-2xl border border-indigo-800 text-center transition group">
-              <h3 className="text-lg font-bold group-hover:text-white">IELTS & English</h3>
+              <h3 className="text-lg font-bold group-hover:text-white">IELTS &amp; English</h3>
               <p className="text-xs text-indigo-300 mt-1">110+ Active Batches</p>
             </Link>
           </div>
