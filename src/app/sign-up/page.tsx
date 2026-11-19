@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiRequest, authStorage, AuthUser } from "@/lib/api";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -25,17 +26,39 @@ export default function SignUpPage() {
   const [role, setRole] = useState<"student" | "tutor">("student");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        message: string;
+        token: string;
+        user: AuthUser;
+      }>("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name, email, phone, password, role }),
+      });
+
+      authStorage.setSession(res.token, res.user);
       toast.success(
-        `Account created as ${role.toUpperCase()} (Free Plan)! Redirecting to sign in...`
+        res.message ||
+          `Account created as ${role.toUpperCase()} (Free Plan)! Welcome to MentorLagbe.`
       );
-      router.push("/sign-in");
-    }, 1000);
+
+      if (res.user.role === "tutor") {
+        router.push("/dashboard/tutor");
+      } else {
+        router.push("/dashboard/student");
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create account.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -171,9 +194,11 @@ export default function SignUpPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3.5 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 group"
+            className="w-full py-3.5 mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 group"
           >
-            {isSubmitting ? "Creating Account..." : `Sign Up as ${role === "student" ? "Student" : "Tutor"}`}
+            {isSubmitting
+              ? "Creating Account..."
+              : `Sign Up as ${role === "student" ? "Student" : "Tutor"}`}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
           </button>
         </form>
