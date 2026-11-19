@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   User,
   Mail,
@@ -11,31 +12,101 @@ import {
   Sparkles,
   Save,
   ArrowUpRight,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiRequest, authStorage, AuthUser } from "@/lib/api";
 
 export default function UpdateProfilePage() {
-  // ডেমো ইউজার ডেটা
-  const [name, setName] = useState("Ariful Islam");
-  const email = "ariful@gmail.com";
-  const role: "student" | "tutor" | "admin" = "student";
-  const plan: "free" | "pro" = "free";
+  const router = useRouter();
 
-  const [phone, setPhone] = useState("+8801700000000");
-  const [bio, setBio] = useState(
-    "HSC science student looking for structured mentorship in Higher Mathematics and Physics."
-  );
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [bio, setBio] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
+  useEffect(() => {
+    const syncUser = () => {
+      const user = authStorage.getUser();
+      if (!user || !authStorage.getToken()) {
+        router.push("/sign-in");
+        return;
+      }
+      setCurrentUser(user);
+      setName(user.name || "");
+      setPhone(user.phone || "");
+      setBio(user.bio || "");
+    };
 
-    setTimeout(() => {
+    syncUser();
+    window.addEventListener("mentorlagbe-auth-change", syncUser);
+    return () => window.removeEventListener("mentorlagbe-auth-change", syncUser);
+  }, [router]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!authStorage.getToken()) {
+      toast.error("Please sign in first to update your profile.");
+      router.push("/sign-in");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        message?: string;
+        user?: AuthUser;
+      }>("/auth/profile", {
+        method: "PATCH",
+        auth: true,
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim(),
+          bio: bio.trim(),
+        }),
+      });
+
+      const mergedUser: AuthUser = {
+        ...(currentUser as AuthUser),
+        ...(res.user || {}),
+        name: res.user?.name ?? name.trim(),
+        phone: res.user?.phone ?? phone.trim(),
+        bio: res.user?.bio ?? bio.trim(),
+      };
+
+      authStorage.updateUser(mergedUser);
+      setCurrentUser(mergedUser);
+      toast.success(res.message || "Profile updated successfully!");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update profile.";
+      toast.error(message);
+    } finally {
       setIsSaving(false);
-      toast.success("Profile updated successfully!");
-    }, 900);
+    }
   };
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
+  const email = currentUser.email;
+  const role = currentUser.role || "student";
+  const plan = currentUser.plan || "free";
+  const displayName = name || currentUser.name;
+  const initials = (displayName || "ML")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -53,15 +124,12 @@ export default function UpdateProfilePage() {
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-extrabold text-lg flex items-center justify-center shrink-0">
-            {name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
+            {initials}
           </div>
           <div className="space-y-1">
-            <h2 className="text-lg font-extrabold text-slate-900">{name}</h2>
+            <h2 className="text-lg font-extrabold text-slate-900">
+              {displayName}
+            </h2>
             <p className="text-xs text-slate-500">{email}</p>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-indigo-100 text-indigo-700">
@@ -80,7 +148,7 @@ export default function UpdateProfilePage() {
           </div>
         </div>
 
-        {plan === "free" && (
+        {plan === "free" && role !== "admin" && (
           <Link
             href="/pricing"
             className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition shrink-0"
@@ -163,9 +231,13 @@ export default function UpdateProfilePage() {
           <button
             type="submit"
             disabled={isSaving}
-            className="inline-flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition"
+            className="inline-flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-md transition"
           >
-            <Save className="w-4 h-4" />
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
             {isSaving ? "Saving Changes..." : "Save Profile"}
           </button>
         </div>
