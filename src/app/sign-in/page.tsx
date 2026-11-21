@@ -1,16 +1,23 @@
+
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  ArrowRight,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { toast } from "sonner";
-import { apiRequest, authStorage, AuthUser } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 
-type DemoRole = "student" | "tutor" | "admin";
+type UserRole = "student" | "tutor" | "admin";
 
 const DEMO_USERS: Record<
-  DemoRole,
+  UserRole,
   { email: string; password: string; label: string }
 > = {
   student: {
@@ -30,110 +37,121 @@ const DEMO_USERS: Record<
   },
 };
 
-const getServerOrigin = (): string => {
-  const rawUrl =
-    process.env.NEXT_PUBLIC_BETTER_AUTH_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:5000";
-  return rawUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+const getDashboardPath = (role?: string) => {
+  switch (role) {
+    case "admin":
+      return "/dashboard/admin";
+
+    case "tutor":
+      return "/dashboard/tutor";
+
+    case "student":
+    default:
+      return "/dashboard/student";
+  }
 };
 
 export default function SignInPage() {
   const router = useRouter();
 
-  const [selectedRole, setSelectedRole] = useState<DemoRole>("student");
+  const [selectedRole, setSelectedRole] =
+    useState<UserRole>("student");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  // Email and Password Login
+  const handleSignIn = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
+
+    if (!email.trim() || !password) {
+      toast.error("Please enter your email and password.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const res = await apiRequest<{
-        success: boolean;
-        message: string;
-        token: string;
-        user: AuthUser;
-      }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
+      const result = await authClient.signIn.email({
+        email: email.trim(),
+        password,
       });
 
-      authStorage.setSession(res.token, res.user);
-      toast.success(res.message || "Welcome back! Signed in successfully.");
-
-      if (res.user.role === "admin") {
-        router.push("/dashboard/admin");
-      } else if (res.user.role === "tutor") {
-        router.push("/dashboard/tutor");
-      } else {
-        router.push("/dashboard/student");
+      if (result.error) {
+        throw new Error(
+          result.error.message || "Failed to sign in."
+        );
       }
+
+      const user = result.data?.user as
+        | { role?: UserRole }
+        | undefined;
+
+      toast.success("Welcome back! Signed in successfully.");
+
+      // Use the role returned by the authenticated user.
+      // Never trust the role selector as proof of authorization.
+      router.replace(getDashboardPath(user?.role));
+
+      router.refresh();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to sign in.";
+        error instanceof Error
+          ? error.message
+          : "Failed to sign in.";
+
       toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSelectDemoRole = (role: DemoRole) => {
+  // Demo role selection
+  const handleSelectDemoRole = (role: UserRole) => {
     const demo = DEMO_USERS[role];
+
     setSelectedRole(role);
     setEmail(demo.email);
     setPassword(demo.password);
+
     toast.info(`Selected ${demo.label}`);
   };
 
+  // Google Login
   const handleGoogleLogin = async () => {
-    const socialRole: "student" | "tutor" =
-      selectedRole === "tutor" ? "tutor" : "student";
-
     setIsGoogleLoading(true);
+
     try {
-      const serverOrigin = getServerOrigin();
-      const callbackUrl = `${serverOrigin}/api/auth/google/callback?role=${socialRole}`;
+      const callbackURL = `${window.location.origin}${getDashboardPath(
+        selectedRole
+      )}`;
 
-      const response = await fetch(
-        `${serverOrigin}/api/better-auth/sign-in/social`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            provider: "google",
-            callbackURL: callbackUrl,
-          }),
-        }
-      );
+      const result = await authClient.signIn.social({
+        provider: "google",
+        callbackURL,
+        errorCallbackURL: `${window.location.origin}/login`,
+      });
 
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
+      if (result.error) {
         throw new Error(
-          data?.message || "Failed to initiate Google sign-in via Better Auth."
+          result.error.message || "Google sign-in failed."
         );
       }
 
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast.info("Initiated Google sign-in via Better Auth.");
-      }
+      // Better Auth handles the OAuth redirect.
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "Google sign-in failed via Better Auth.";
+          : "Google sign-in failed.";
+
       toast.error(message);
-    } finally {
       setIsGoogleLoading(false);
     }
   };
@@ -141,21 +159,26 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-14 px-4 sm:px-6 lg:px-8 flex items-center justify-center transition-colors">
       <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg p-8 sm:p-10 space-y-7">
+
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">
             Welcome Back
           </h1>
+
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Sign in to access your MentorLagbe account and dashboard.
           </p>
         </div>
 
-        {/* Role Selector Buttons */}
+        {/* Role Selector */}
         <div className="bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/70 rounded-2xl p-3">
           <div className="grid grid-cols-3 gap-2">
-            {(["student", "tutor", "admin"] as DemoRole[]).map((roleKey) => {
+            {(
+              ["student", "tutor", "admin"] as UserRole[]
+            ).map((roleKey) => {
               const isSelected = selectedRole === roleKey;
+
               return (
                 <button
                   key={roleKey}
@@ -178,15 +201,26 @@ export default function SignInPage() {
           </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSignIn} className="space-y-4" autoComplete="off">
+        {/* Email and Password Form */}
+        <form
+          onSubmit={handleSignIn}
+          className="space-y-4"
+          autoComplete="on"
+        >
+          {/* Email */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+            <label
+              htmlFor="email"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5"
+            >
               Email Address *
             </label>
+
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
+
               <input
+                id="email"
                 type="email"
                 required
                 autoComplete="username"
@@ -198,13 +232,20 @@ export default function SignInPage() {
             </div>
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+            <label
+              htmlFor="password"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5"
+            >
               Password *
             </label>
+
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
+
               <input
+                id="password"
                 type={showPassword ? "text" : "password"}
                 required
                 autoComplete="current-password"
@@ -213,10 +254,15 @@ export default function SignInPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-11 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
+
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() =>
+                  setShowPassword((prev) => !prev)
+                }
+                aria-label={
+                  showPassword ? "Hide password" : "Show password"
+                }
                 className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 absolute right-3.5 top-3.5 transition"
               >
                 {showPassword ? (
@@ -228,33 +274,43 @@ export default function SignInPage() {
             </div>
           </div>
 
+          {/* Sign In Button */}
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGoogleLoading}
             className="w-full py-3.5 mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 group"
           >
             {isSubmitting ? "Signing In..." : "Sign In"}
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+
+            {!isSubmitting && (
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+            )}
           </button>
         </form>
 
-        {/* OR & Continue with Google */}
+        {/* Divider and Google Login */}
         <div className="space-y-3 pt-1">
           <div className="relative flex items-center justify-center">
             <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
+
             <span className="bg-white dark:bg-slate-900 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
               OR
             </span>
+
             <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
           </div>
 
           <button
             type="button"
-            disabled={isGoogleLoading}
+            disabled={isGoogleLoading || isSubmitting}
             onClick={handleGoogleLogin}
             className="w-full py-3 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 disabled:opacity-60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-100 shadow-xs transition flex items-center justify-center gap-2.5"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 fill="#4285F4"
                 d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.54-1.14 2.85-2.4 3.72v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.21z"
@@ -272,13 +328,17 @@ export default function SignInPage() {
                 d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"
               />
             </svg>
-            {isGoogleLoading ? "Connecting Google..." : "Continue with Google"}
+
+            {isGoogleLoading
+              ? "Connecting Google..."
+              : "Continue with Google"}
           </button>
         </div>
 
-        {/* Footer Link */}
+        {/* Footer */}
         <p className="text-center text-sm text-slate-600 dark:text-slate-400">
           Don&apos;t have an account?{" "}
+
           <Link
             href="/sign-up"
             className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold"
