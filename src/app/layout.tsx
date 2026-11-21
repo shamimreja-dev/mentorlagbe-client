@@ -18,8 +18,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-slate-50 text-slate-900 flex flex-col min-h-screen`}>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${inter.className} bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col min-h-screen transition-colors`}
+      >
         <Toaster position="top-right" richColors />
         <Navbar />
         <main className="flex-grow">{children}</main>

@@ -160,16 +160,16 @@ export default function TutorDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
               Tutor Dashboard
             </h1>
             {isProTutor && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                 <ShieldCheck className="w-3.5 h-3.5" /> Pro Tutor
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Manage your tuition batches, posting limits, and incoming student
             applications.
           </p>
@@ -185,54 +185,58 @@ export default function TutorDashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
             Active Tuition Posts
           </p>
-          <p className="text-3xl font-extrabold text-slate-900 mt-2">
+          <p className="text-3xl font-extrabold text-slate-900 dark:text-white mt-2">
             {plan === "free"
               ? `${tuitions.length} / ${maxFreePosts}`
               : tuitions.length}
           </p>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {plan === "free"
               ? "Free plan allows up to 2 listings"
               : "Unlimited listings enabled"}
           </p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
             Total Applications
           </p>
-          <p className="text-3xl font-extrabold text-indigo-600 mt-2">
+          <p className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2">
             {totalApplicants}
           </p>
-          <p className="text-xs text-slate-500 mt-1">Requests from students</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Requests from students
+          </p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
             Accepted Students
           </p>
-          <p className="text-3xl font-extrabold text-emerald-600 mt-2">
+          <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">
             {acceptedStudents}
           </p>
-          <p className="text-xs text-slate-500 mt-1">Enrolled in your batches</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Enrolled in your batches
+          </p>
         </div>
       </div>
 
       {/* Free Limit / Pro Upgrade Notice */}
       {isLimitReached && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider bg-amber-200/80 text-amber-900 px-2.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider bg-amber-200/80 dark:bg-amber-900/70 text-amber-900 dark:text-amber-200 px-2.5 py-0.5 rounded-full">
               <Sparkles className="w-3 h-3" /> Free Posting Limit Reached
             </span>
-            <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
               You have used all {maxFreePosts} free tuition listings.
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
               Upgrade to Pro Tutor Plan ($15) with Stripe to unlock unlimited
               tuition posts and a verified badge.
             </p>
@@ -247,31 +251,31 @@ export default function TutorDashboardPage() {
       )}
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-slate-200">
+        <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-2" />
-          <p className="text-xs font-medium text-slate-500">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
             Loading your tuitions and applications...
           </p>
         </div>
       ) : (
         <>
           {/* My Tuitions Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-base font-extrabold text-slate-900">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
                 My Tuition Batches
               </h3>
-              <span className="text-xs font-semibold text-slate-500">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 {tuitions.length} listings
               </span>
             </div>
 
             {tuitions.length === 0 ? (
               <div className="text-center py-12 px-6 space-y-2">
-                <p className="text-sm font-bold text-slate-800">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
                   No tuition batches posted yet.
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Click &ldquo;Post New Tuition&rdquo; above to create your first
                   listing.
                 </p>
@@ -280,7 +284,7 @@ export default function TutorDashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       <th className="py-3.5 px-6">Title & Subject</th>
                       <th className="py-3.5 px-6">Class & Mode</th>
                       <th className="py-3.5 px-6">Monthly Fee</th>
@@ -288,7 +292,7 @@ export default function TutorDashboardPage() {
                       <th className="py-3.5 px-6">Moderation</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-sm">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                     {tuitions.map((t) => {
                       const modStatus =
                         t.approvalStatus || t.status || "Pending";
@@ -307,27 +311,27 @@ export default function TutorDashboardPage() {
                       return (
                         <tr
                           key={t._id}
-                          className="hover:bg-slate-50/70 transition"
+                          className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition"
                         >
                           <td className="py-4 px-6">
                             <Link
                               href={`/tuitions/${t._id}`}
-                              className="font-bold text-slate-900 hover:text-indigo-600 transition"
+                              className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                             >
                               {t.title}
                             </Link>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                               {t.subject}
                             </p>
                           </td>
-                          <td className="py-4 px-6 text-xs font-semibold text-slate-700">
+                          <td className="py-4 px-6 text-xs font-semibold text-slate-700 dark:text-slate-300">
                             {t.classLevel} • {t.mode}
                           </td>
-                          <td className="py-4 px-6 font-bold text-slate-900">
+                          <td className="py-4 px-6 font-bold text-slate-900 dark:text-white">
                             ${t.monthlyFee}/mo
                           </td>
                           <td className="py-4 px-6">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-full">
                               <Users className="w-3.5 h-3.5" /> {appCount}
                             </span>
                           </td>
@@ -335,10 +339,10 @@ export default function TutorDashboardPage() {
                             <span
                               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                                 isApproved
-                                  ? "bg-emerald-100 text-emerald-700"
+                                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
                                   : modStatus === "Rejected"
-                                    ? "bg-rose-100 text-rose-700"
-                                    : "bg-amber-100 text-amber-800"
+                                    ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400"
+                                    : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
                               }`}
                             >
                               {isApproved ? (
@@ -361,28 +365,28 @@ export default function TutorDashboardPage() {
           </div>
 
           {/* Incoming Student Applications */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-base font-extrabold text-slate-900">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
                 Student Applications
               </h3>
-              <span className="text-xs font-semibold text-slate-500">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 {applications.length} requests
               </span>
             </div>
 
             {applications.length === 0 ? (
               <div className="text-center py-12 px-6">
-                <p className="text-sm font-bold text-slate-800">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
                   No student applications received yet.
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Once students apply to your approved tuitions, they will
                   appear here.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {applications.map((app) => {
                   const studentObj =
                     typeof app.studentId === "object" && app.studentId !== null
@@ -406,22 +410,22 @@ export default function TutorDashboardPage() {
                   return (
                     <div
                       key={app._id}
-                      className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 transition"
+                      className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition"
                     >
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="font-bold text-slate-900 text-sm">
+                          <h4 className="font-bold text-slate-900 dark:text-white text-sm">
                             {studentName}
                           </h4>
                           {isPriority && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
                               <Sparkles className="w-3 h-3" /> Priority Student
                             </span>
                           )}
                           {(studentEmail || phone) && (
                             <>
                               <span className="text-xs text-slate-400">•</span>
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
                                 {[studentEmail, phone]
                                   .filter(Boolean)
                                   .join(" • ")}
@@ -429,11 +433,14 @@ export default function TutorDashboardPage() {
                             </>
                           )}
                         </div>
-                        <p className="text-xs font-semibold text-indigo-600">
+                        <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                           Tuition: {tuitionTitle}
                         </p>
-                        <p className="text-xs text-slate-600">
-                          Schedule: <strong>{app.preferredSchedule}</strong>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                          Schedule:{" "}
+                          <strong className="text-slate-800 dark:text-slate-100">
+                            {app.preferredSchedule}
+                          </strong>
                           {app.note ? ` — "${app.note}"` : ""}
                         </p>
                       </div>
@@ -457,7 +464,7 @@ export default function TutorDashboardPage() {
                               onClick={() =>
                                 handleStatusChange(app._id, "Rejected")
                               }
-                              className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 disabled:opacity-60 text-rose-700 border border-rose-200 transition"
+                              className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-950/70 disabled:opacity-60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition"
                             >
                               <XCircle className="w-3.5 h-3.5" /> Reject
                             </button>
@@ -466,8 +473,8 @@ export default function TutorDashboardPage() {
                           <span
                             className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
                               app.status === "Accepted"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-rose-100 text-rose-700"
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                                : "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400"
                             }`}
                           >
                             {app.status === "Accepted" ? (

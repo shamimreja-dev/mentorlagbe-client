@@ -1,35 +1,48 @@
 import Link from "next/link";
-import { BookOpen, Mail, MapPin, Phone } from "lucide-react";
+import {
+  BookOpen,
+  Mail,
+  MapPin,
+  Phone,
+  ArrowUpRight,
+  ShieldCheck,
+} from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-900 text-slate-300 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+    <footer className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-300 border-t border-slate-800/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           {/* Brand & Tagline */}
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="bg-indigo-600 p-2 rounded-xl text-white">
-                <BookOpen className="w-6 h-6" />
+          <div className="lg:col-span-4 space-y-5">
+            <Link href="/" className="inline-flex items-center gap-2.5 group">
+              <div className="bg-indigo-600 group-hover:bg-indigo-500 p-2.5 rounded-xl text-white shadow-md shadow-indigo-950/50 transition">
+                <BookOpen className="w-5 h-5" />
               </div>
               <span className="text-2xl font-extrabold tracking-tight text-white">
                 Mentor<span className="text-indigo-400">Lagbe</span>
               </span>
             </Link>
-            <p className="text-sm text-slate-400 leading-relaxed">
+
+            <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
               Connecting verified subject-matter tutors with ambitious students
               for personalized 1-on-1 mentorship and structured academic batches.
             </p>
-            {/* Social Media Links with New X Logo */}
-            <div className="flex items-center gap-4 pt-2">
+
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/70 border border-slate-700/70 text-xs font-medium text-slate-300">
+              <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>Verified Tutors & Secure Stripe Checkout</span>
+            </div>
+
+            {/* Social Media Links */}
+            <div className="flex items-center gap-3 pt-1">
               <a
                 href="https://x.com"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="X (formerly Twitter)"
-                className="p-2.5 bg-slate-800 hover:bg-indigo-600 text-white rounded-lg transition"
+                className="w-10 h-10 bg-slate-800/90 hover:bg-indigo-600 border border-slate-700/70 hover:border-indigo-500 text-slate-200 hover:text-white rounded-xl transition flex items-center justify-center"
               >
-                {/* Official New X Logo SVG */}
                 <svg
                   className="w-4 h-4 fill-current"
                   viewBox="0 0 24 24"
@@ -42,7 +55,8 @@ export default function Footer() {
                 href="https://facebook.com"
                 target="_blank"
                 rel="noreferrer"
-                className="p-2.5 bg-slate-800 hover:bg-indigo-600 text-white rounded-lg transition text-xs font-bold"
+                aria-label="Facebook"
+                className="w-10 h-10 bg-slate-800/90 hover:bg-indigo-600 border border-slate-700/70 hover:border-indigo-500 text-slate-200 hover:text-white rounded-xl transition flex items-center justify-center text-xs font-bold tracking-wide"
               >
                 FB
               </a>
@@ -50,7 +64,8 @@ export default function Footer() {
                 href="https://linkedin.com"
                 target="_blank"
                 rel="noreferrer"
-                className="p-2.5 bg-slate-800 hover:bg-indigo-600 text-white rounded-lg transition text-xs font-bold"
+                aria-label="LinkedIn"
+                className="w-10 h-10 bg-slate-800/90 hover:bg-indigo-600 border border-slate-700/70 hover:border-indigo-500 text-slate-200 hover:text-white rounded-xl transition flex items-center justify-center text-xs font-bold tracking-wide"
               >
                 IN
               </a>
@@ -58,81 +73,131 @@ export default function Footer() {
           </div>
 
           {/* Quick Links */}
-          <div>
-            <h3 className="text-white font-bold text-base mb-4">Quick Links</h3>
-            <ul className="space-y-2.5 text-sm">
+          <div className="lg:col-span-2">
+            <h3 className="text-white font-bold text-xs uppercase tracking-wider mb-4">
+              Quick Links
+            </h3>
+            <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/" className="hover:text-indigo-400 transition">
-                  Home
+                <Link
+                  href="/"
+                  className="text-slate-400 hover:text-indigo-400 transition inline-flex items-center gap-1 group"
+                >
+                  <span>Home</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
                 </Link>
               </li>
               <li>
-                <Link href="/tuitions" className="hover:text-indigo-400 transition">
-                  Browse Tuitions
+                <Link
+                  href="/tuitions"
+                  className="text-slate-400 hover:text-indigo-400 transition inline-flex items-center gap-1 group"
+                >
+                  <span>Browse Tuitions</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="hover:text-indigo-400 transition">
-                  Pricing & Pro Plans
+                <Link
+                  href="/pricing"
+                  className="text-slate-400 hover:text-indigo-400 transition inline-flex items-center gap-1 group"
+                >
+                  <span>Pricing & Pro Plans</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
                 </Link>
               </li>
               <li>
-                <Link href="/sign-up" className="hover:text-indigo-400 transition">
-                  Become a Tutor
+                <Link
+                  href="/sign-up"
+                  className="text-slate-400 hover:text-indigo-400 transition inline-flex items-center gap-1 group"
+                >
+                  <span>Become a Tutor</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
                 </Link>
               </li>
             </ul>
           </div>
 
           {/* Popular Categories */}
-          <div>
-            <h3 className="text-white font-bold text-base mb-4">Top Subjects</h3>
-            <ul className="space-y-2.5 text-sm">
+          <div className="lg:col-span-3">
+            <h3 className="text-white font-bold text-xs uppercase tracking-wider mb-4">
+              Top Subjects
+            </h3>
+            <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/tuitions?search=Mathematics" className="hover:text-indigo-400 transition">
-                  Higher Mathematics
+                <Link
+                  href="/tuitions?search=Mathematics"
+                  className="text-slate-400 hover:text-indigo-400 transition inline-flex items-center gap-1 group"
+                >
+                  <span>Higher Mathematics</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
                 </Link>
               </li>
               <li>
-                <Link href="/tuitions?search=Physics" className="hover:text-indigo-400 transition">
-                  Physics & Chemistry
+                <Link
+                  href="/tuitions?search=Physics"
+                  className="text-slate-400 hover:text-indigo-400 transition inline-flex items-center gap-1 group"
+                >
+                  <span>Physics & Chemistry</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
                 </Link>
               </li>
               <li>
-                <Link href="/tuitions?search=Programming" className="hover:text-indigo-400 transition">
-                  Web & Programming
+                <Link
+                  href="/tuitions?search=Programming"
+                  className="text-slate-400 hover:text-indigo-400 transition inline-flex items-center gap-1 group"
+                >
+                  <span>Web & Programming</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
                 </Link>
               </li>
               <li>
-                <Link href="/tuitions?search=IELTS" className="hover:text-indigo-400 transition">
-                  IELTS & Spoken English
+                <Link
+                  href="/tuitions?search=IELTS"
+                  className="text-slate-400 hover:text-indigo-400 transition inline-flex items-center gap-1 group"
+                >
+                  <span>IELTS & Spoken English</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
                 </Link>
               </li>
             </ul>
           </div>
 
           {/* Contact Info */}
-          <div>
-            <h3 className="text-white font-bold text-base mb-4">Contact Us</h3>
-            <ul className="space-y-3 text-sm text-slate-400">
-              <li className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                <span>Dhanmondi, Dhaka-1209, Bangladesh</span>
+          <div className="lg:col-span-3">
+            <h3 className="text-white font-bold text-xs uppercase tracking-wider mb-4">
+              Contact Us
+            </h3>
+            <ul className="space-y-3.5 text-sm text-slate-400">
+              <li className="flex items-start gap-3">
+                <span className="w-8 h-8 rounded-lg bg-slate-800/90 border border-slate-700/70 flex items-center justify-center shrink-0 mt-0.5">
+                  <MapPin className="w-4 h-4 text-indigo-400" />
+                </span>
+                <span className="leading-relaxed">
+                  Dhanmondi, Dhaka-1209, Bangladesh
+                </span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-indigo-400 shrink-0" />
+              <li className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-lg bg-slate-800/90 border border-slate-700/70 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4 text-indigo-400" />
+                </span>
                 <span>+880 1700-000000</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-indigo-400 shrink-0" />
-                <span>support@mentorlagbe.com</span>
+              <li className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-lg bg-slate-800/90 border border-slate-700/70 flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4 text-indigo-400" />
+                </span>
+                <span className="break-all">support@mentorlagbe.com</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-slate-800 mt-12 pt-6 text-center text-sm text-slate-500">
-          © {new Date().getFullYear()} MentorLagbe. All rights reserved.
+        {/* Bottom Copyright Bar */}
+        <div className="border-t border-slate-800/90 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm text-slate-500">
+          <p>© {new Date().getFullYear()} MentorLagbe. All rights reserved.</p>
+          <p className="text-slate-500">
+            Online & Home Tuition Finder and Booking Platform
+          </p>
         </div>
       </div>
     </footer>

@@ -26,6 +26,8 @@ export default function UpdateProfilePage() {
   const [bio, setBio] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  const sanitizePhone = (value: string) => value.replace(/\D/g, "").slice(0, 11);
+
   useEffect(() => {
     const syncUser = () => {
       const user = authStorage.getUser();
@@ -35,7 +37,7 @@ export default function UpdateProfilePage() {
       }
       setCurrentUser(user);
       setName(user.name || "");
-      setPhone(user.phone || "");
+      setPhone(sanitizePhone(user.phone || ""));
       setBio(user.bio || "");
     };
 
@@ -53,6 +55,11 @@ export default function UpdateProfilePage() {
       return;
     }
 
+    if (!/^\d{11}$/.test(phone)) {
+      toast.error("Phone number must be exactly 11 digits (e.g. 01712345678).");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const res = await apiRequest<{
@@ -64,7 +71,7 @@ export default function UpdateProfilePage() {
         auth: true,
         body: JSON.stringify({
           name: name.trim(),
-          phone: phone.trim(),
+          phone,
           bio: bio.trim(),
         }),
       });
@@ -73,7 +80,7 @@ export default function UpdateProfilePage() {
         ...(currentUser as AuthUser),
         ...(res.user || {}),
         name: res.user?.name ?? name.trim(),
-        phone: res.user?.phone ?? phone.trim(),
+        phone: res.user?.phone ?? phone,
         bio: res.user?.bio ?? bio.trim(),
       };
 
@@ -197,15 +204,20 @@ export default function UpdateProfilePage() {
 
           <div className="md:col-span-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-              Phone Number *
+              Phone Number * (11 Digits)
             </label>
             <div className="relative">
               <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
               <input
-                type="text"
+                type="tel"
+                inputMode="numeric"
                 required
+                minLength={11}
+                maxLength={11}
+                pattern="\d{11}"
+                placeholder="01712345678"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(sanitizePhone(e.target.value))}
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
             </div>
