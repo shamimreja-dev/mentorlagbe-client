@@ -13,8 +13,13 @@ export interface AuthUser {
   bio?: string;
 }
 
-const API_BASE_URL =
+const rawApiBase =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+const cleanedApiBase = rawApiBase.trim().replace(/\/+$/, "");
+const API_BASE_URL = cleanedApiBase.endsWith("/api")
+  ? cleanedApiBase
+  : `${cleanedApiBase}/api`;
 
 const TOKEN_KEY = "mentorlagbe_token";
 const USER_KEY = "mentorlagbe_user";
